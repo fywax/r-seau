@@ -11,85 +11,41 @@
 #include "LibSerHV.h"
 
 // include pour les fonctions entrees sortie
-#include <stdio.h>
-#include <stdlib.h>
 #include <termios.h>
-
-#include <fcntl.h>
-#include <stdio.h>
 #include <unistd.h>
 
-static struct termios old, new;
+// Prototypes pour l'affichage
+void ClrScr(void);
+void Gotoxy(int x, int y);
+void DelNewLine(char *Chaine);
+void MonPrintf(char *tempo, int espace, int taille);
+void AfficheEnteteVehiculeHV();
+void AfficheVehiculeHV(struct VehiculeHV *UnRecord);
+void SaiSieVehiculeHV(int Reference, struct VehiculeHV *UnRecord);
 
 // clrscr() function definition
-void ClrScr(void)
-{
-    system("clear");
-}
+void ClrScr(void) { system("clear"); }
 
-void Gotoxy(int x, int y)
-{
+void Gotoxy(int x, int y) {
     printf("%c[%d;%df", 0x1B, y, x);
 }
 
-/* Initialize new terminal i/o settings */
-void initTermios(int echo)
-{
-    tcgetattr(0, &old); // grab old terminal i/o settings
-    new = old;          // make new settings same as old settings
-    new.c_lflag &= ~ICANON; // disable buffered i/o
-    new.c_lflag &= echo ? ECHO : ~ECHO; // set echo mode
-    tcsetattr(0, TCSANOW, &new); // apply terminal io settings
-}
-
-/* Restore old terminal i/o settings */
-void resetTermios(void)
-{
-    tcsetattr(0, TCSANOW, &old);
-}
-
-/* Read 1 character - echo defines echo mode */
-char getch_(int echo)
-{
-    char ch;
-    initTermios(echo);
-    ch = getchar();
-    resetTermios();
-    return ch;
-}
-
-/* Read 1 character without echo */
-char Getch(void)
-{
-    return getch_(0);
-}
-
-/* Read 1 character with echo */
-char GetchE(void)
-{
-    return getch_(1);
-}
-
-// permet de supprimer le cr qui placé dans la chaine lors d'un fgets
-void DelNewLine(char *Chaine)
-{
+// Permet de supprimer le cr qui est placé dans la chaîne lors d'un fgets
+void DelNewLine(char *Chaine) {
     Chaine[strlen(Chaine) - 1] = 0;
 }
 
-void MonPrintf(char *tempo, int espace, int taille)
-{
+void MonPrintf(char *tempo, int espace, int taille) {
     int Count;
     printf("%s", tempo);
     Count = espace - taille;
-    while (Count > 0)
-    {
+    while (Count > 0) {
         printf(" ");
         Count--;
     }
 }
 
-void AfficheEnteteVehiculeHV()
-{
+void AfficheEnteteVehiculeHV() {
     char Tampon[80];
     sprintf(Tampon, "%s", "Ref");
     MonPrintf(Tampon, 4, strlen(Tampon));
@@ -104,8 +60,7 @@ void AfficheEnteteVehiculeHV()
     printf("\n");
 }
 
-void AfficheVehiculeHV(struct VehiculeHV *UnRecord)
-{
+void AfficheVehiculeHV(struct VehiculeHV *UnRecord) {
     char Tampon[80];
     sprintf(Tampon, "%d", UnRecord->Reference);
     MonPrintf(Tampon, 4, strlen(Tampon));
@@ -120,8 +75,7 @@ void AfficheVehiculeHV(struct VehiculeHV *UnRecord)
     printf("\n");
 }
 
-void SaiSieVehiculeHV(int Reference, struct VehiculeHV *UnRecord)
-{
+void SaiSieVehiculeHV(int Reference, struct VehiculeHV *UnRecord) {
     char Tampon[80];
 
     printf("Reference :%d \n", Reference);
@@ -145,52 +99,15 @@ void SaiSieVehiculeHV(int Reference, struct VehiculeHV *UnRecord)
     AfficheEnteteVehiculeHV();
     AfficheVehiculeHV(UnRecord);
     printf("-----------------------\n");
-    return;
-}
-
-// Correction dans la fonction facturation
-struct FactureHV *facturation(struct VehiculeHV *vehicule)
-{
-    struct FactureHV *record = malloc(sizeof(struct FactureHV));
-    if (record == NULL)
-    {
-        perror("Erreur allocation mémoire");
-        return NULL;
-    }
-
-    printf("Nom du client : ");
-    scanf("%s", record->Acheteur);
-
-    printf("Référence : ");
-    scanf("%d", &record->Reference);
-
-    printf("Quantité (de véhicules à acheter) : ");
-    scanf("%d", &record->Quantite);
-
-    // Vérification que la quantité demandée est disponible dans vehicule
-    if (record->Quantite > vehicule->Quantite)
-    {
-        printf("Erreur : pas assez de véhicules disponibles.\n");
-        free(record);
-        return NULL;
-    }
-
-    // Mise à jour de la quantité de véhicules
-    vehicule->Quantite -= record->Quantite;
-
-    return record;
 }
 
 // Fonction main corrigée
-int main()
-{
+int main() {
     char Choix;
-    char Tampon[80];
-    int res;
-    struct VehiculeHV UnRecord;
-    int Numero, reference;
-    while (1)
-    {
+    int reference, quantite;
+    char NomClient[60];
+
+    while (1) {
         printf("-------2022-----------\n");
         printf("1) Ajout              \n");
         printf("2) Vehicule           \n");
@@ -198,67 +115,84 @@ int main()
         printf("5) Achat              \n");
         printf("6) Factures           \n");
         printf("7) A propos           \n");
-        printf("8) exit               \n");
+        printf("8) Exit               \n");
         printf("----------------------\n");
         printf(">>");
-        Choix = GetchE();
+        Choix = getchar();
+        getchar(); // Consommer le '\n' après le choix
         printf("\n");
-        switch (Choix)
-        {
-        case '1':
-        {
-            struct VehiculeHV UnRecord;
-            FILE *sortie;
-            char Redo;
 
-            Redo = 'y';
-            while (Redo == 'Y' || Redo == 'y')
-            {
-                int Nombre;
-                Nombre = NombreVehiculesHV("VehiculesHV");
-                SaiSieVehiculeHV(Nombre + 1, &UnRecord);
-                CreationAjoutVehiculeHV("VehiculesHV", &UnRecord);
-                printf("Encoder un autre (Y/N) ?)");
-                printf(">>");
-                Redo = GetchE();
-                printf("\n");
-            }
+        switch (Choix) {
+            case '1': {
+                struct VehiculeHV UnRecord;
+                char Redo = 'y';
 
-            break;
-        }
-        case '2':
-            ListingVehiculesHV("VehiculesHV");
-            break;
-        case '4':
-            printf("Reference : ");
-            scanf("%d", &reference);
-            rechercheHV("VehiculesHV", reference, &UnRecord);
-            AfficheEnteteVehiculeHV();
-            AfficheVehiculeHV(&UnRecord);
-            break;
-        case '5':
-        {
-            struct FactureHV *facture = facturation(&UnRecord); // Passer UnRecord en argument
-            if (facture != NULL)
-            {
-                AfficheFacture(facture);
-                free(facture); // Libérez la mémoire après utilisation
+                while (Redo == 'Y' || Redo == 'y') {
+                    int Nombre = NombreVehiculesHV("VehiculesHV");
+                    SaiSieVehiculeHV(Nombre + 1, &UnRecord);
+                    CreationAjoutVehiculeHV("VehiculesHV", &UnRecord);
+                    printf("Encoder un autre (Y/N) ? ");
+                    Redo = getchar();
+                    getchar(); // Consommer le '\n'
+                }
+                break;
             }
-            else
-            {
-                printf("Erreur lors de la création de la facture.\n");
-            }
-            break;
-        }
-        case '6':
-            ListingFacturesHV("FactureHV");
-            break;
-        case '7':
-            AProposServeurHV("V 1", "Francois&Noah", "Dewez");
-            break;
+            case '2':
+                ListingVehiculesHV("VehiculesHV");
+                break;
 
-        case '8':
-            exit(0);
+            case '4':
+                printf("Reference : ");
+                scanf("%d", &reference);
+                getchar(); // Consommer le '\n'
+                struct VehiculeHV UnRecord;
+                if (rechercheHV("VehiculesHV", reference, &UnRecord) == 1) {
+                    AfficheEnteteVehiculeHV();
+                    AfficheVehiculeHV(&UnRecord);
+                } else {
+                    printf("Vehicule introuvable.\n");
+                }
+                break;
+
+            case '5': {
+                printf("Nom du client : ");
+                fgets(NomClient, sizeof(NomClient), stdin);
+                DelNewLine(NomClient);
+
+                printf("Reference : ");
+                scanf("%d", &reference);
+                getchar(); // Consommer le '\n'
+
+                printf("Quantite : ");
+                scanf("%d", &quantite);
+                getchar(); // Consommer le '\n'
+
+                if (ReservationHV("VehiculesHV", reference, quantite) == 1) {
+                    time_t Date = time(NULL);
+                    if (FacturationHV("FacturesHV", NomClient, Date, quantite, reference) == 1) {
+                        printf("Facturation réussie.\n");
+                    } else {
+                        printf("Erreur lors de la facturation.\n");
+                    }
+                } else {
+                    printf("Erreur : Stock insuffisant ou reference invalide.\n");
+                }
+                break;
+            }
+            case '6':
+                ListingFacturesHV("FacturesHV");
+                break;
+
+            case '7':
+                AProposServeurHV("V 1", "Francois & Noah", "Dewez");
+                break;
+
+            case '8':
+                exit(0);
+
+            default:
+                printf("Choix invalide, réessayez.\n");
+                break;
         }
     }
 }
