@@ -15,10 +15,6 @@
 #include <stdlib.h>
 #include <termios.h>
 
-#include <fcntl.h>
-#include <stdio.h>
-#include <unistd.h>
-
 static struct termios old, new;
  
 //clrscr() function definition
@@ -109,8 +105,7 @@ void AfficheEnteteVehiculeHV ()
  sprintf(Tampon,"%s","Ref" ) ;MonPrintf(Tampon,4,strlen(Tampon)) ;
  sprintf(Tampon,"%s","Constructeur") ;    MonPrintf(Tampon,30,strlen(Tampon)) ;
  sprintf(Tampon,"%s","Modele") ;    MonPrintf(Tampon,30,strlen(Tampon)) ;
- sprintf(Tampon,"%s\t","Quantite") ; MonPrintf(Tampon,6,strlen(Tampon)) ;
- sprintf(Tampon,"%s","Motorisation") ; MonPrintf(Tampon,30,strlen(Tampon)) ;
+ sprintf(Tampon,"%s","Quantite") ; MonPrintf(Tampon,6,strlen(Tampon)) ;
  printf("\n") ;
 }
 
@@ -120,8 +115,7 @@ void AfficheVehiculeHV (struct VehiculeHV    *UnRecord)
  sprintf(Tampon,"%d",UnRecord->Reference ) ;  MonPrintf(Tampon,4,strlen(Tampon)) ;
  sprintf(Tampon,"%s",UnRecord->Constructeur ) ;    MonPrintf(Tampon,30,strlen(Tampon)) ;
  sprintf(Tampon,"%s",UnRecord->Modele ) ;    MonPrintf(Tampon,30,strlen(Tampon)) ;
- sprintf(Tampon,"%d\t\t",UnRecord->Quantite ) ; MonPrintf(Tampon,6,strlen(Tampon)) ;
- sprintf(Tampon,"%s",UnRecord->Motorisation ) ; MonPrintf(Tampon,30,strlen(Tampon)) ;
+ sprintf(Tampon,"%d",UnRecord->Quantite ) ; MonPrintf(Tampon,6,strlen(Tampon)) ;
  printf("\n") ;
 }
 
@@ -131,19 +125,13 @@ void SaiSieVehiculeHV (int Reference, struct VehiculeHV  *UnRecord )
 
  printf("Reference :%d \n",Reference) ;
  UnRecord->Reference = Reference ; 
-
  printf("Saisie Constructeur :") ;
  fgets(UnRecord->Constructeur ,sizeof UnRecord->Constructeur ,stdin ) ;
-
  printf("Saisie Modele :") ;
  fgets(UnRecord->Modele ,sizeof UnRecord->Modele ,stdin ) ;
-
  printf("Saisie Quantite :") ;
  fgets(Tampon,sizeof Tampon,stdin ) ;
  UnRecord -> Quantite = atoi(Tampon) ;
-
- printf("Saisie Motorisation :") ;
- fgets(UnRecord->Motorisation ,sizeof UnRecord->Modele ,stdin ) ;
  
  DelNewLine(UnRecord->Constructeur) ;
  DelNewLine(UnRecord->Modele) ;
@@ -155,30 +143,27 @@ void SaiSieVehiculeHV (int Reference, struct VehiculeHV  *UnRecord )
 
 int NombreVehiculesHV (char *NomFichier)
 {
- int fd ;
- int taille ;
- fd = open(NomFichier, O_RDONLY) ; /* On ouvre le fichier en Lecture */
- if ( fd == -1 )
+ FILE *sortie ;
+ sortie = fopen(NomFichier,"r") ; /* Si le fichier existe, on le cree sinon on ajoute */
+ if ( sortie == NULL )
     {
      fprintf(stderr,"Pas de fichier\n") ;
      return 0 ;
     }
  else
     fprintf(stderr,"Ouverture reussie \n") ;
- taille = lseek(fd, 0, SEEK_END ) ;
- close(fd) ;
- return ( taille / sizeof(struct VehiculeHV  )) ;
+ fseek(sortie, 0, SEEK_END ) ;
+ return (ftell(sortie)/ sizeof(struct VehiculeHV  )) ;
 }
 
 void CreationAjoutVehiculeHV (char *NomFichier,struct VehiculeHV  *UnRecord )
 {
+ FILE *sortie ;
  char Redo ;
  int nbr ;
- int fd ;
- int taille ;
- 
- fd =open(NomFichier, O_WRONLY | O_APPEND | O_CREAT, 0666 );
- if ( fd == -1 )
+
+ sortie = fopen(NomFichier,"a") ; /* Si le fichier existe, on le cree sinon on ajoute */
+ if ( sortie == NULL )
     {
      fprintf(stderr,"Echec Ouverture\n") ;
      exit(0) ;
@@ -186,13 +171,12 @@ void CreationAjoutVehiculeHV (char *NomFichier,struct VehiculeHV  *UnRecord )
  else
     fprintf(stderr,"Ouverture reussie \n") ;
 
-  taille = lseek(fd, 0, SEEK_END ) ;
-  printf("Position actuelle dans le fichier %ld\n",taille );
+ 
+  printf("Position actuelle dans le fichier %ld\n",ftell(sortie)) ;
   UnRecord-> Supprime = 0 ;
-  
-  nbr = write (fd, UnRecord,sizeof(struct VehiculeHV ) ); ;
-  
- close(fd) ;
+  nbr = fwrite(UnRecord,sizeof(struct VehiculeHV  ),1,sortie) ;
+  fflush(sortie) ;
+ fclose(sortie) ;
 }
 
 
@@ -211,12 +195,13 @@ void AfficheFacture(struct FactureHV *UneFacture)
 void ListingVehiculesHV (char *NomFichier)
 {
  struct VehiculeHV   UnRecord ;
+ FILE *sortie ;
  char Tampon[80] ;
- int bytesRead ;
- int fd ;
+ int  Numero ;
+ int  nbr ;
 
- fd = open(NomFichier, O_RDONLY );
- if ( fd == -1 )
+ sortie = fopen(NomFichier,"r") ; /* Si le fichier existe, on le cree sinon on ajoute */
+ if ( sortie == NULL )
     {
      fprintf(stderr,"Echec Ouverture\n") ;
      exit(0) ;
@@ -225,27 +210,27 @@ void ListingVehiculesHV (char *NomFichier)
     fprintf(stderr,"Ouverture reussie \n") ;
 
  AfficheEnteteVehiculeHV () ;
- bytesRead= read (fd, &UnRecord,sizeof(UnRecord));
+ nbr = fread(&UnRecord,sizeof(UnRecord),1,sortie) ;
  
- while ( bytesRead )
+ while ( !feof(sortie) )
  {
-  fprintf(stderr,"Record lu %d Bytes \n",bytesRead) ;
+  fprintf(stderr,"Record lu %d et Position actuelle dans le fichier %ld\n",nbr,ftell(sortie)) ;
   AfficheVehiculeHV ( &UnRecord) ;
-  bytesRead =read (fd, &UnRecord,sizeof(UnRecord));
+  nbr = fread(&UnRecord,sizeof(UnRecord),1,sortie) ;
  }
- close(fd) ;
+ fclose(sortie) ;
 }
 
 void ListingFacturesHV(char *NomFichier)
 {
  struct FactureHV UneFacture ;
+ FILE *sortie ;
  char Tampon[80] ;
- int  fd ;
- int bytesRead ;
- long pos ;
+ int  Numero ;
+ int  nbr ;
 
- fd = open(NomFichier, O_RDONLY );
- if ( fd == -1 )
+ sortie = fopen(NomFichier,"r") ; /* Si le fichier existe, on le cree sinon on ajoute */
+ if ( sortie == NULL )
     {
      fprintf(stderr,"Echec Ouverture\n") ;
      exit(0) ;
@@ -253,17 +238,16 @@ void ListingFacturesHV(char *NomFichier)
  else
     fprintf(stderr,"Ouverture reussie \n") ;
 
- // sizeof(struct FactureHV)
  
- bytesRead= read (fd, &UneFacture,sizeof(struct FactureHV));
- while ( bytesRead )
+ nbr = fread(&UneFacture,sizeof(struct FactureHV),1,sortie) ;
+ 
+ while ( !feof(sortie) )
  {
-  pos = lseek(fd, 0, SEEK_CUR ) ; 
-  fprintf(stderr,"Record lu %d bytes et Position actuelle dans le fichier %ld\n", bytesRead ,pos ) ;
+  fprintf(stderr,"Record lu %d et Position actuelle dans le fichier %ld\n",nbr,ftell(sortie)) ;
   AfficheFacture( &UneFacture) ;
-  bytesRead= read (fd, &UneFacture,sizeof(struct FactureHV));
+  nbr = fread(&UneFacture,sizeof(struct FactureHV ),1,sortie) ;
  }
- close(fd) ;
+ fclose(sortie) ;
 }
 
 int main()
@@ -272,7 +256,7 @@ int main()
  char Tampon[80] ;
  int res ;
  struct VehiculeHV  UnRecord ;
- int Numero, reference;
+ int Numero ;
  while(1)
  {
   printf("-------2022-----------\n") ;
@@ -309,15 +293,10 @@ int main()
    case '2': ListingVehiculesHV ("VehiculesHV") ;
              break ;
    case '4': 
-            printf("Reference : ");
-            scanf("%d", &reference);
-            rechercheHV("VehiculesHV", reference, &UnRecord);
-            AfficheEnteteVehiculeHV ();
-            AfficheVehiculeHV (&UnRecord);
-            break ;
+             break ;
    case '6': ListingFacturesHV("FactureHV") ;
 	     break ;
-   case '7': AProposServeurHV("V 1","Francois&Noah","Dewez") ;
+   case '7': AProposServeurHV("V 1","Herman","Vanstapel") ;
              break ;
    
 	

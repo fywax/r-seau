@@ -5,67 +5,41 @@
 #include <string.h>     /* for memset() */
 #include <unistd.h>     /* for close() */
 
-#include <netdb.h>      /* For Getinfo */
-
-
 #define MAXPENDING 5    /* Maximum outstanding connection requests */
 
-#include "LibSer.h"  	/* Error handling function */
 #include "HandleTCPClient.h"   /* TCP client handling function */
 
 int main(int argc, char *argv[])
 {
     int servSock;                    /* Socket descriptor for server */
     int clntSock;                    /* Socket descriptor for client */
-    char* hostName ;                   /* Hostname to resolve */
-    char *servIP;                    /* Server IP address (dotted quad) */
-    struct sockaddr_in echoServAddr; /*  Pointer to Local address */
+    struct sockaddr_in echoServAddr; /* Local address */
     struct sockaddr_in echoClntAddr; /* Client address */
     unsigned short echoServPort;     /* Server port */
     unsigned int clntLen;            /* Length of client address data structure */
-                                     /* Hostname resolution */
-                                     // Pour la recherche 
-                                     
 
-    if (argc != 3)     /* Test for correct number of arguments */
+    if (argc != 2)     /* Test for correct number of arguments */
     {
-        fprintf(stderr, "Usage:  %s <server Ip address> <Server Port>\n", argv[0]);
+        fprintf(stderr, "Usage:  %s <Server Port>\n", argv[0]);
         exit(1);
     }
-    
-    
-    hostName = argv[1] ;       /* First argument server Ip address */  	
-    echoServPort = atoi(argv[2]);  /* Second argument local port */
 
-    /* resolve hostName */  
-   
-	struct addrinfo* addr;
-  	int result = getaddrinfo(hostName, NULL, NULL, &addr); /* String to sockaddr_in */
- 	if (result != 0) {
-    		printf("Error from getaddrinfo: %s\n", gai_strerror(result));
-  	}
- 	 else {
- 	      struct sockaddr_in *echoServAddrOnly;
-	      echoServAddrOnly  = (struct sockaddr_in*) addr->ai_addr; /* Pointer to sockaddr_in Local address IP */
-	       servIP = inet_ntoa(echoServAddrOnly->sin_addr) ;
-  	      printf("getaddrinfo: %s\n", servIP);
-      }
-
-     /* Construct local address structure */
-    memset(&echoServAddr, 0, sizeof(echoServAddr));   /* Zero out structure */
-    echoServAddr.sin_family = AF_INET;                /* Internet address family */
-    echoServAddr.sin_addr.s_addr = inet_addr(servIP); /* Server Ip address String to Ipv4 */
-    echoServAddr.sin_port = htons(echoServPort);      /* Local port */ 
+    echoServPort = atoi(argv[1]);  /* First arg:  local port */
 
     /* Create socket for incoming connections */
     if ((servSock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
         DieWithError("socket() failed");
     else
        printf("socket() Ok\n") ;
-       
+      
+    /* Construct local address structure */
+    memset(&echoServAddr, 0, sizeof(echoServAddr));   /* Zero out structure */
+    echoServAddr.sin_family = AF_INET;                /* Internet address family */
+    echoServAddr.sin_addr.s_addr = htonl(INADDR_ANY); /* Any incoming interface */
+    echoServAddr.sin_port = htons(echoServPort);      /* Local port */
 
     /* Bind to the local address */
-    if (bind(servSock, (struct sockaddr *) &echoServAddr, sizeof(struct sockaddr_in)) < 0) /* Now echoserver is a pointer */
+    if (bind(servSock, (struct sockaddr *) &echoServAddr, sizeof(echoServAddr)) < 0)
         DieWithError("bind() failed");
     else
        printf("bind() Ok\n") ;    

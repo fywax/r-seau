@@ -1,4 +1,6 @@
 #include "LibSerHV.h"
+#include <stdio.h>  /* for perror() */
+#include <stdlib.h> /* for exit() */
 
 void AProposServeurHV(char *Version,char *Nom1,char* Nom2)
 {
@@ -28,4 +30,10 @@ int rechercheHV(char*NomFichier, int Reference, struct VehiculeHV *UnRecord)
 
     fclose(fichier);
     return 0;
+}
+
+void DieWithError(char *errorMessage)
+{
+    perror(errorMessage);
+    exit(1);
 }
