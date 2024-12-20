@@ -4,10 +4,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 #include <netdb.h>  /* pour getaddrinfo() et struct addrinfo */
 #include "Requete.h"
 #include "data.h"
 #include "LibSerHV.h"
+
+// include pour les fonctions entrees sortie
+#include <termios.h>
+#include <unistd.h>
 
 #define RCVBUFSIZE 32
 
@@ -49,7 +54,7 @@ int main(int argc, char *argv[])
     int bytesSent, bytesRcvd, totalBytesRcvd;
     char bufferString[80];
     struct Requete ARequest;
-    int userChoice;
+    int userChoice, ref;
 
     if (argc != 3)
     {
@@ -91,9 +96,10 @@ int main(int argc, char *argv[])
         {
         case 1:
             printf("Entrez le numero de reference: ");
-            scanf("%s", bufferString);
+            scanf("%d", &ref);
+            struct VehiculeHV UnRecord;
+            RechercheHV("VehiculesHV", ref, &UnRecord);
             ARequest.Type = Question;
-            ARequest.Reference = atoi(bufferString);
 
             /* Send the structure to the server */
             if ((bytesSent = write(sock, &ARequest, sizeof(struct Requete))) != sizeof(struct Requete))
@@ -139,10 +145,9 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "(Success) Packet of %d Bytes were received\n", bytesRcvd);
                 totalBytesRcvd += bytesRcvd;
             }
-            int temp1 = ARequest.Reference;
-            int temp2 = ARequest.Quantite;
 
-            MajStockVehiculeHV(temp1, temp2);
+            MajStockVehiculeHV(ARequest.Reference, ARequest.Quantite);
+            FacturationHV("FacturesHV", ARequest.NomClient, time(NULL),  ARequest.Quantite,  ARequest.Reference);
 
             /* Affiche les détails de la facture reçue */
             printf("\n--- Facture ---\n");
